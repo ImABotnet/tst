@@ -1,0 +1,253 @@
+{%- liquid
+  if product.requires_selling_plan or product.selected_selling_plan_allocation
+    assign current_selling_plan_allocation = product.selected_or_first_available_selling_plan_allocation
+  else
+    assign current_selling_plan_allocation = nil
+  endif
+-%}
+
+<style>
+  .centerer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate3d(-50%, -50%, 0);
+}
+
+h4 {
+  font-weight: 200;
+  text-align: center;
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+p {
+  margin-top: 25px;
+  font-size: 13px;
+  color: #3366cc;
+  text-align: center;
+}
+
+p a {
+  color: inherit;
+  text-decoration: none;
+}
+
+p a:hover {
+  text-decoration: underline;
+}
+
+
+/*
+ * Switcher Styles
+ */
+
+.switcher {
+  display: inline-block;
+  margin-top:3px;
+  padding: 4px;
+  background: #fff;
+  border-radius: 50px;
+  border: solid 1px #ddd;
+  position: relative !important;
+}
+
+.switcher__input {
+  display: none;
+}
+
+.switcher__label {
+  float: left;
+  width: 50%;
+  font-size: 12px;
+  line-height: 30px;
+  color: #000;
+  text-align: center;
+  cursor: pointer;
+  position: inherit;
+  z-index: 999;
+  transition: color 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+  will-change: transform;
+}
+
+.switcher__toggle {
+  position: absolute;
+  float: left;
+  height: 90%;
+  width: 50%;
+  font-size: 12px;
+  line-height: 30px;
+  cursor: pointer;
+  background-color: #3366cc;
+  display: none !important;
+  border-radius: 30px;
+  left: 5px;
+  top: 4px;
+  transition: left 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
+  will-change: transform;
+}
+
+.switcher__input:checked + .switcher__label {
+  color: #fff;
+}
+
+.switcher__input--yang:checked ~ .switcher__toggle {
+  left: 210px;
+}
+</style>
+
+
+
+
+
+<!-- Bold Subscriptions Widget -->
+{% if product.selling_plan_groups.size > 0 %}
+<fieldset
+  class="bsub-widget"
+  role="{%- if product.requires_selling_plan == false or product.selling_plan_groups.size > 1 -%} radiogroup {%- else -%} group {%- endif -%}"
+  data-bsub-widget
+>
+  <legend>
+    {%- if product.requires_selling_plan and product.selling_plan_groups.size == 1 -%}
+      {{ product.selling_plan_groups.first.name }}
+    {%- else -%}
+      <!-- {{ 'products.product.purchase_options' | t }} -->
+    {%- endif -%}
+  </legend>
+
+  <div
+    class="switcher bsub-widget__wrapper
+    {% if product.requires_selling_plan and product.selling_plan_groups.size == 1 %} bsub-widget__wrapper--single {% endif %}"
+  >
+    <!-- Selling Plan Groups (Purchase Options) -->
+    <div class="bsub-widget__groups-container">
+      <!-- render One-time purchase option -->
+      {% unless product.requires_selling_plan == true %}
+        <div class="bsub-widget__group">
+          <label class="bsub-widget__group-label switcher__label">
+            <input class="switcher__input switcher__input--yin"
+              type="radio" value="once" name="bsub-selling-plan-group"
+              data-bsub-selling-plan-group-input
+              data-bsub-purchase-option-one-time
+              {% unless current_selling_plan_allocation %} checked {% endunless %}
+                   
+              onchange="window.BOLD.BsubWidget.handleSellingPlanGroupChange(event)"
+            >
+            <div class="bsub-widget__group-header">
+              
+              <div class="bsub-widget__text">
+                ACHAT EN UNE FOIS
+                <!-- {{ 'products.product.one_time_purchase' | t }} -->
+              </div>
+            </div>
+          </label>
+        </div>
+      {% endunless %}
+
+      <!-- selling plan group radio -->
+      {% for group in product.selling_plan_groups %}
+        <div
+          class="bsub-widget__group"
+          data-bsub-selling-plan-group
+          data-bsub-selling-plan-group-id="{{ group.id }}"
+        >
+          <label class="bsub-widget__group-label switcher__label">
+            <input
+              data-bsub-selling-plan-group-input
+              class="bsub-widget__input switcher__input--yang switcher__input"
+              type="radio" value="{{group.id}}" name="bsub-selling-plan-group"
+              {% if group.id == current_selling_plan_allocation.selling_plan.group_id %} checked {% endif %}
+              onchange="window.BOLD.BsubWidget.handleSellingPlanGroupChange(event)"
+            >
+            <div class="bsub-widget__group-header">
+              
+              <div class="bsub-widget__text">
+JE M'ABONNE = MOINS 25% 
+                <br/>
+              </div>
+            </div>
+          </label>
+        </div>
+      {% endfor %}
+    </div>
+      <span class="switcher__toggle"></span>
+
+  </div> 
+  <!-- Render individual selling plans -->
+    {% for group in product.selling_plan_groups %}
+      <div style="display:none;"
+        class="bsub-widget__plans-container
+          {% unless current_selling_plan_allocation.selling_plan.group_id == group.id %} bsub__hidden {% endunless %}"
+        data-bsub-selling-plan-group-id="{{ group.id }}"
+        data-bsub-selling-plans-container
+      >
+        <fieldset>
+          <legend>
+            Delivery Frequency
+          </legend>
+          {% for plan in group.selling_plans %}
+            <div 
+              class="bsub-widget__plan"
+              data-bsub-selling-plan
+              data-bsub-selling-plan-id="{{ plan.id }}"
+            >
+              <label class="bsub-widget__plan-label">
+                <input
+                  data-bsub-selling-plan-input
+                  type="radio" value="{{ plan.id }}"
+                  name="bsub-selling-plan-{{ group.id }}"
+                  {% if current_selling_plan_allocation == nil and forloop.first %} checked {% endif %}
+                  {% if current_selling_plan_allocation.selling_plan.id == plan.id -%} checked {% endif %}
+                  onchange="window.BOLD.BsubWidget.handleSellingPlanChange(event)"
+                >
+                <div class="bsub-widget__plan-header">
+                 
+                  <div class="bsub-widget__text">
+                    {{- plan.name -}}
+                  </div>
+                  <div class="bsub-widget__plan-pricing">
+                    <span data-bsub-per-delivery-price></span>
+                    <span>&nbsp;/&nbsp;</span>
+                    <span data-bsub-delivery-frequency>delivery</span>
+                  </div>
+                </div>
+              </label>
+            </div>
+          {% endfor %}
+        </fieldset>
+      </div>
+<div style="text-align: center;"><span style="font-size: 14px; color: rgb(0, 0, 0);">Comment fonctionnent les abonnements ? Clique<div class="ymq_alert_box2" data-ymq-id="ymqdialogbox1" style="text-align: center;"><strong>ici</strong></div></span></div>
+    {% endfor %} 
+
+  <input
+    type="hidden"
+    name="selling_plan"
+    data-bsub-selling-plan-id-input
+    value="{{ current_selling_plan_allocation.selling_plan.id }}"
+  />
+
+  <script
+    type="application/json"
+    data-bsub-product-json
+    data-bsub-product-id="{{ product.id }}"
+  >
+    {{ product | json }}
+  </script>
+</fieldset>
+
+<script
+  type="application/json"
+  data-bsub-money-format="{{shop.money_format}}"
+></script>
+
+<input
+  type="hidden"
+  data-bsub-page-template
+  value="{{ template }}"
+/>
+
+{% endif %}
+
+
+
+
